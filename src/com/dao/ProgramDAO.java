@@ -14,40 +14,44 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.WriteResult;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.DeleteResult;
+import static com.mongodb.client.model.Filters.*;
+
+import org.bson.Document;
 
 public class ProgramDAO {
 	
 	private MongoClient mongo;
-	private DB db ;
+	private MongoDatabase  db ;
 	
-	public ProgramDAO(String dbName){
-		try{
-			mongo = new MongoClient("localhost", 27017);
-			db = mongo.getDB(dbName);
-		}
-		catch(UnknownHostException ex){
-			ex.printStackTrace();
-		}
+	public ProgramDAO(MongoClientURI uri){
+			
+			mongo = new MongoClient(uri);
+			db = mongo.getDatabase(uri.getDatabase());
+		
 	}
 	
-	public void saveProgram(Program pro ){
+	public void saveProgram(List<Program> programList ){
 		
-		DBCollection col = db.getCollection("programs");
-		DBObject doc = Program.createDBObject(pro);
-		WriteResult result = col.insert(doc);
-		System.out.println(result.getUpsertedId());
-		System.out.println(result.getN());
-		
-		
+		MongoCollection<Document> col = db.getCollection("programs");
+		List<Document> docList = new ArrayList<>();
+		for(Program pro : programList){
+			Document doc = Program.createDBObject(pro);
+			docList.add(doc);
+		}
+		col.insertMany(docList); 	 	
 	}
 	
 	public void deleteProgramById(Program pro ){
 		
-		DBCollection col = db.getCollection("programs");
-		BasicDBObject query=new BasicDBObject("_id",new ObjectId(pro.getId()));
-		WriteResult result = col.remove(query);
-		System.out.println("Deleted--"+result.getN());
+		MongoCollection<Document> col = db.getCollection("programs");
+		DeleteResult result = col.deleteOne(eq("_id", new ObjectId(pro.getId())));
+		System.out.println("No Of Documents Deleted--"+result.getDeletedCount());
 		
 		
 	}
@@ -55,13 +59,15 @@ public class ProgramDAO {
 	public List<Program> getProgramsByBatchId(String batchId ){
 		
 		List<Program> programList = new ArrayList<>();
-		DBCollection col = db.getCollection("programs");
-		DBObject query = BasicDBObjectBuilder.start().add("batchId", batchId).get();
-		DBCursor results = col.find(query);
-		for (DBObject result : results) {
-		    // do something with each result
-			Program pro = Program.createProgram(result);
-			programList.add(pro);
+		MongoCollection<Document> col = db.getCollection("programs");
+		MongoCursor<Document> cursor = col.find(eq("batchId",batchId)).iterator();
+		try {
+		    while (cursor.hasNext()) {
+		    	Program pro = Program.createProgram(cursor.next());
+		    	programList.add(pro);
+		    }
+		} finally {
+		    cursor.close();
 		}
 		return programList;
 	}

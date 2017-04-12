@@ -1,5 +1,6 @@
 package com.model;
 
+import org.bson.Document;
 import org.bson.types.ObjectId;
 
 import com.mongodb.BasicDBObjectBuilder;
@@ -88,8 +89,8 @@ public class Program {
 	
 	
 	
-	public static DBObject createDBObject(Program program) {
-		BasicDBObjectBuilder docBuilder = BasicDBObjectBuilder.start();
+	public static Document createDBObject(Program program) {
+		Document docBuilder = new Document();
 		if(program.getId() != null)
 			docBuilder.append("_id", new ObjectId(program.getId()));
 		docBuilder.append("batchId", program.getBatchId());
@@ -148,13 +149,12 @@ public class Program {
 		docBuilder.append("supplementalAppRequired", program.getSupplementalAppRequired());
 		
 		
-		return docBuilder.get();
+		return docBuilder;
 	}
 	
-	public static Program createProgram(DBObject dbObj) {
+	public static Program createProgram(Document dbObj) {
 		
 		Program program = new Program();
-		BasicDBObjectBuilder docBuilder = BasicDBObjectBuilder.start();
 		program.setBatchId((String)dbObj.get("batchId"));
 		program.setId(dbObj.get("_id").toString());
 		
